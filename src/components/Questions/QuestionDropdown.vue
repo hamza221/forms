@@ -97,6 +97,13 @@ export default {
 	},
 
 	mixins: [QuestionMixin],
+	props: {
+		dropDownState: {
+			type: Object,
+			required: false,
+			default: null,
+		},
+	},
 
 	data() {
 		return {
@@ -140,6 +147,16 @@ export default {
 	},
 
 	watch: {
+		dropDownState: {
+			handler(val) {
+				if (val) {
+					const prop = val.value
+					this.selectedOption = { id: prop.id, questionId: prop.questionId, text: prop.text }
+				}
+			},
+			deep: true,
+			immediate: true,
+		},
 		edit(edit) {
 			// When leaving edit mode, filter and delete empty options
 			if (!edit) {
