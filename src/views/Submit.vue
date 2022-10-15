@@ -81,8 +81,10 @@
 					:max-string-lengths="maxStringLengths"
 					v-bind="question"
 					:values.sync="answers[question.id]"
+					:dropDownState="formValuesForLocalStorage[question.id]" 
 					@keydown.enter="onKeydownEnter"
-					@keydown.ctrl.enter="onKeydownCtrlEnter" />
+					@keydown.ctrl.enter="onKeydownCtrlEnter"
+					@update:values="addFormFieldToLocalStorage(question,answers[question.id],answerTypes[question.type])" />
 			</ul>
 			<input ref="submitButton"
 				class="primary"
@@ -150,6 +152,7 @@ export default {
 			maxStringLengths: loadState('forms', 'maxStringLengths'),
 			answerTypes,
 			answers: {},
+			formValuesForLocalStorage: [],
 			loading: false,
 			success: false,
 		}
@@ -209,7 +212,26 @@ export default {
 			return message
 		},
 	},
+	mounted() {
+		if (localStorage.getItem('formFields')) {
+			this.formValuesForLocalStorage = JSON.parse(localStorage.getItem('formFields'));
 
+			this.formValuesForLocalStorage.forEach(answer => {
+				if (answer) {
+					switch (answer?.type) {
+						case "QuestionMultiple":
+							this.answers[answer.id] = answer.value;
+							break;
+						case "QuestionDate":
+							break;
+						default:
+							this.answers[answer.id] = [answer.value];
+							break;
+					}
+				}
+			});
+		}
+	},
 	watch: {
 		hash() {
 			// If public view, abort. Should normally not occur.
@@ -257,11 +279,35 @@ export default {
 			// Using button-click event to not bypass validity-checks and use our specified behaviour
 			this.$refs.submitButton.click()
 		},
+		addFormFieldToLocalStorage(question, value, type) {
+			if (question.type === "dropdown") {
+				for (let option in question.options) {
+					if (question.options[option].id == value) {
+						this.formValuesForLocalStorage[question.id] = { id: question.id, value: question.options[option], type: type.component.name };
+						break;
+					}
+				}
+			}
+			else {
+				this.formValuesForLocalStorage[question.id] = { id: question.id, value, type: type.component.name };
+			}
+			const parsed = JSON.stringify(this.formValuesForLocalStorage);
+			localStorage.setItem('formFields', parsed);
+
+		},
+		deleteFormFieldFromLocalStorage() {
+			this.formValuesForLocalStorage = [];
+			const parsed = JSON.stringify(this.formValuesForLocalStorage);
+			localStorage.setItem('formFields', parsed);
+		},
+
+		
 
 		/**
 		 * Submit the form after the browser validated it 🚀
 		 */
 		async onSubmit() {
+			this.deleteFormFieldFromLocalStorage();
 			this.loading = true
 
 			try {
