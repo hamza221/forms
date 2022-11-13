@@ -22,7 +22,18 @@
 
 <template>
 	<div class="section question-summary">
-		<h3>{{ question.text }}</h3>
+		<div class="question-actions">
+			<h3>{{ question.text }}</h3>
+			<NcActions :aria-label="t('forms', 'Options')" :force-menu="true">
+				<NcActionLink :href="questionDownload">
+					<template #icon>
+						<IconDownload :size="20" />
+					</template>
+					{{ t('forms', 'Download question CSV') }}
+				</NcActionLink>
+			</NcActions>
+		</div>
+
 		<p class="question-summary__detail">
 			{{ answerTypes[question.type].label }}
 		</p>
@@ -59,10 +70,19 @@
 
 <script>
 import answerTypes from '../../models/AnswerTypes.js'
+import NcActionLink from '@nextcloud/vue/dist/Components/NcActionLink.js'
+import IconDownload from 'vue-material-design-icons/Download.vue'
+import NcActions from '@nextcloud/vue/dist/Components/NcActions.js'
+import { generateOcsUrl } from '@nextcloud/router'
 
 export default {
 	name: 'ResultsSummary',
 
+	components: {
+		IconDownload,
+		NcActionLink,
+		NcActions,
+	},
 	props: {
 		submissions: {
 			type: Array,
@@ -163,11 +183,18 @@ export default {
 
 			return textAnswers
 		},
+		questionDownload() {
+			return generateOcsUrl('apps/forms/api/v2/submissions/exportQuestion/{questionId}', { questionId: this.question.id })
+		},
 	},
 }
 </script>
 
 <style lang="scss" scoped>
+.question-actions {
+		display: flex;
+		align-items: center;
+}
 .question-summary {
 	padding-left: 44px;
 	padding-right: 16px;

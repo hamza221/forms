@@ -1096,6 +1096,39 @@ class ApiController extends OCSController {
 		$csv = $this->submissionService->getSubmissionsCsv($hash);
 		return new DataDownloadResponse($csv['data'], $csv['fileName'], 'text/csv');
 	}
+	/**
+	 * @NoAdminRequired
+	 * @NoCSRFRequired
+	 *
+	 * Export submissions of a specified Question
+	 *
+	 * @param int $questionId of the question
+	 * @return DataDownloadResponse
+	 * @throws OCSBadRequestException
+	 * @throws OCSForbiddenException
+	 */
+	public function exportQuestion(int $questionId): DataDownloadResponse {
+		$this->logger->debug('Export submissions for Question: {questionId}', [
+			'questionId' => $questionId,
+		]);
+
+		try {
+			$question = $this->questionMapper->findById($questionId);
+			$formId = $question->getFormId();
+			$form = $this->formMapper->findById($formId);
+		} catch (IMapperException $e) {
+			$this->logger->debug('Could not find question');
+			throw new OCSBadRequestException();
+		}
+
+		if ($form->getOwnerId() !== $this->currentUser->getUID()) {
+			$this->logger->debug('This form is not owned by the current user');
+			throw new OCSForbiddenException();
+		}
+
+		$csv = $this->submissionService->getQuestionCsv($formId, $questionId);
+		return new DataDownloadResponse($csv['data'], $csv['fileName'], 'text/csv');
+	}
 
 	/**
 	 * @NoAdminRequired

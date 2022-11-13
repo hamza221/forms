@@ -228,6 +228,14 @@ return [
 			]
 		],
 		[
+			'name' => 'api#exportQuestion',
+			'url' => '/api/{apiVersion}/submissions/exportQuestion/{questionId}',
+			'verb' => 'GET',
+			'requirements' => [
+				'apiVersion' => 'v2'
+			]
+		],
+		[
 			'name' => 'api#exportSubmissionsToCloud',
 			'url' => '/api/{apiVersion}/submissions/export',
 			'verb' => 'POST',
