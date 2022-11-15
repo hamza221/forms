@@ -299,45 +299,44 @@ class SubmissionService {
 		// Process each answers
 		foreach ($submissionEntities as $submission) {
 			$currentSubmissionAnswers = $this->answerMapper->findBySubmissionAndQuestionId($submission->getId(), $questionId);
-				$row = [];
+			$row = [];
 
-				// User
-				$user = $this->userManager->get($submission->getUserId());
-				if ($user === null) {
-					// Give empty userId
-					$row[] = '';
-					// TRANSLATORS Shown on export if no Display-Name is available.
-					$row[] = $this->l10n->t('Anonymous user');
+			// User
+			$user = $this->userManager->get($submission->getUserId());
+			if ($user === null) {
+				// Give empty userId
+				$row[] = '';
+				// TRANSLATORS Shown on export if no Display-Name is available.
+				$row[] = $this->l10n->t('Anonymous user');
+			} else {
+				$row[] = $user->getUID();
+				$row[] = $user->getDisplayName();
+			}
+			
+			// Date
+			$row[] = $this->dateTimeFormatter->formatDateTime($submission->getTimestamp(), 'full', 'full', new DateTimeZone($userTimezone), $this->l10n);
+
+			// Answers, make sure we keep the question order
+			$answers = array_reduce($currentSubmissionAnswers, function (array $carry, Answer $answer) {
+				$questionId = $answer->getQuestionId();
+
+				// If key exists, insert separator
+				if (key_exists($questionId, $carry)) {
+					$carry[$questionId] .= '; ' . $answer->getText();
 				} else {
-					$row[] = $user->getUID();
-					$row[] = $user->getDisplayName();
+					$carry[$questionId] = $answer->getText();
 				}
-			
-				// Date
-				$row[] = $this->dateTimeFormatter->formatDateTime($submission->getTimestamp(), 'full', 'full', new DateTimeZone($userTimezone), $this->l10n);
 
-				// Answers, make sure we keep the question order
-				$answers = array_reduce($currentSubmissionAnswers, function (array $carry, Answer $answer) {
-					$questionId = $answer->getQuestionId();
-
-					// If key exists, insert separator
-					if (key_exists($questionId, $carry)) {
-						$carry[$questionId] .= '; ' . $answer->getText();
-					} else {
-						$carry[$questionId] = $answer->getText();
-					}
-
-					return $carry;
-				}, []);
+				return $carry;
+			}, []);
 
 			
-				$row[] = key_exists($question->getId(), $answers)
+			$row[] = key_exists($question->getId(), $answers)
 				? $answers[$question->getId()]
 				: null;
 			
 
-				$data[] = $row;
-			
+			$data[] = $row;
 		}
 
 		// TRANSLATORS Appendix for CSV-Export: 'Form Title (responses).csv'
