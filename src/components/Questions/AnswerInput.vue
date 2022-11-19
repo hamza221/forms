@@ -3,7 +3,7 @@
 		<div :is="pseudoIcon"
 			v-if="!isDropdown"
 			class="question__item__pseudoInput" />
-		<input ref="input"
+		<textarea ref="input"
 			:aria-label="t('forms', 'An answer for the {index} option', { index: index + 1 })"
 			:placeholder="t('forms', 'Answer number {index}', { index: index + 1 })"
 			:value="answer.text"
@@ -14,8 +14,7 @@
 			type="text"
 			@input="onInput"
 			@keydown.delete="deleteEntry"
-			@keydown.enter.prevent="addNewEntry">
-
+			@keydown.enter.prevent="addNewEntry" />
 		<!-- Delete answer -->
 		<NcActions>
 			<NcActionButton @click="deleteEntry">
@@ -111,17 +110,23 @@ export default {
 			// clone answer
 			const answer = Object.assign({}, this.answer)
 			answer.text = this.$refs.input.value
+			if (!this.isUnique) {
+				const multipleAnswers = answer.text.split(/\r?\n/g)
+				if (multipleAnswers.length > 1) {
+					// extract all answer entries except the first one to parent
+					this.$emit('multiple-answers', multipleAnswers, this.answer)
+					return
+				}
+			}
 
 			if (this.answer.local) {
-
 				// Dispatched for creation. Marked as synced
 				// eslint-disable-next-line vue/no-mutating-props
 				this.answer.local = false
 				const newAnswer = await this.debounceCreateAnswer(answer)
-
 				// Forward changes, but use current answer.text to avoid erasing
 				// any in-between changes while creating the answer
-				Object.assign(newAnswer, { text: this.$refs.input.value })
+				Object.assign(newAnswer, { text: answer.text })
 				this.$emit('update:answer', answer.id, newAnswer)
 			} else {
 				this.debounceUpdateAnswer(answer)
@@ -221,6 +226,7 @@ export default {
 		width: 100%;
 		position: relative;
 		margin-right: 2px !important;
+		resize: none;
 
 		&--shifted {
 			left: -30px;

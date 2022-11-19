@@ -66,7 +66,8 @@
 						:max-option-length="maxStringLengths.optionText"
 						@add="addNewEntry"
 						@delete="deleteOption"
-						@update:answer="updateAnswer" />
+						@update:answer="updateAnswer"
+						@multiple-answers="handleMultipleOptions" />
 				</template>
 
 				<li v-if="(edit && !isLastEmpty) || hasNoAnswer" class="question__item">
@@ -180,7 +181,58 @@ export default {
 			// Radio: create array
 			this.$emit('update:values', [this.questionValues])
 		},
+		async handleMultipleOptions(answers, answer) {
+			this.edit = true
+			const options = this.options.slice()
+			if (answer.local) {
+				await axios.post(generateOcsUrl('apps/forms/api/v2/option'), {
+					questionId: this.id,
+					text: answers[0],
+				})
+				answer.local = false
 
+			} else {
+				try {
+					await axios.post(generateOcsUrl('apps/forms/api/v2/option/update'), {
+						id: answer.id,
+						keyValuePairs: {
+							text: answers[0],
+						},
+					})
+					logger.debug('Updated answer', { answer })
+				} catch (error) {
+					logger.error('Error while saving answer', { answer, error })
+					showError(t('forms', 'Error while saving the answer'))
+				}
+			}
+			answer.text = answers[0]
+			const answerIndex = options.findIndex(option => option.id === answer.id)
+			options[answerIndex] = answer
+			for (let i = 1; i < answers.length; i++) {
+
+				options.push({
+					id: GenRandomId(),
+					questionId: this.id,
+					text: answers[i],
+					local: false,
+				})
+
+				await axios.post(generateOcsUrl('apps/forms/api/v2/option'), {
+					questionId: this.id,
+					text: answers[i],
+				})
+			}
+			options.push({
+				id: GenRandomId(),
+				questionId: this.id,
+				text: '',
+				local: true,
+			})
+			this.updateOptions(options)
+			this.$nextTick(() => {
+				this.focusIndex(options.length - 1)
+			})
+		},
 		/**
 		 * Is the provided answer required ?
 		 * This is needed for checkboxes as html5
@@ -244,7 +296,6 @@ export default {
 				text: '',
 				local: true,
 			})
-
 			// Update question
 			this.updateOptions(options)
 
