@@ -131,6 +131,14 @@ return [
 				'apiVersion' => 'v2'
 			]
 		],
+		[
+			'name' => 'api#ownerTransfer',
+			'url' => '/api/{apiVersion}/form/transfer',
+			'verb' => 'POST',
+			'requirements' => [
+				'apiVersion' => 'v2'
+			]
+		],
 
 		// Questions
 		[

@@ -24,7 +24,7 @@
 <template>
 	<div>
 		<NcMultiselect :clear-on-select="false"
-			:close-on-select="false"
+			:close-on-select="isOwnershipTransfer"
 			:hide-selected="true"
 			:internal-search="false"
 			:loading="showLoadingCircle"
@@ -74,6 +74,11 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		isOwnershipTransfer: {
+			type:Boolean,
+			default: false,
+			required:false
+		}
 	},
 
 	data() {
