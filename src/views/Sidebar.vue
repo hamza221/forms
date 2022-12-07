@@ -21,7 +21,7 @@
  -->
 
 <template>
-	<NcAppSidebar v-show="opened"
+	<NcAppSidebar v-show="sidebarOpened"
 		:active="active"
 		:title="t('forms', 'Form settings')"
 		@close="onClose"
@@ -72,16 +72,13 @@ export default {
 		SharingSidebarTab,
 		SettingsSidebarTab,
 	},
+
 	mixins: [ViewsMixin],
 
 	props: {
 		active: {
 			type: String,
 			default: 'forms-sharing',
-		},
-		opened: {
-			type: Boolean,
-			required: true,
 		},
 	},
 
@@ -90,10 +87,10 @@ export default {
 		 * Sidebar state methods
 		 */
 		onClose() {
-			this.$emit('update:opened', false)
+			this.$emit('update:sidebarOpened', false)
 		},
 		onToggle() {
-			this.$emit('update:opened', !this.opened)
+			this.$emit('update:sidebarOpened', !this.sidebarOpened)
 		},
 		onUpdateActive(active) {
 			this.$emit('update:active', active)
