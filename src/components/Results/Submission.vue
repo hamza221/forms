@@ -25,6 +25,12 @@
 		<div class="submission-head">
 			<h3>{{ submission.userDisplayName }}</h3>
 			<NcActions class="submission-menu" :force-menu="true">
+				<NcActionLink :href="responseDownload">
+					<template #icon>
+						<IconDownload :size="20" />
+					</template>
+					{{ t('forms', 'Download this response') }}
+				</NcActionLink>
 				<NcActionButton @click="onDelete">
 					<template #icon>
 						<IconDelete :size="20" />
@@ -47,8 +53,11 @@
 <script>
 import NcActions from '@nextcloud/vue/dist/Components/NcActions.js'
 import NcActionButton from '@nextcloud/vue/dist/Components/NcActionButton.js'
+import NcActionLink from '@nextcloud/vue/dist/Components/NcActionLink.js'
 import moment from '@nextcloud/moment'
 import IconDelete from 'vue-material-design-icons/Delete.vue'
+import IconDownload from 'vue-material-design-icons/Download.vue'
+import { generateOcsUrl } from '@nextcloud/router'
 
 import Answer from './Answer.vue'
 
@@ -58,8 +67,10 @@ export default {
 	components: {
 		Answer,
 		IconDelete,
+		IconDownload,
 		NcActions,
 		NcActionButton,
+		NcActionLink,
 	},
 
 	props: {
@@ -74,6 +85,10 @@ export default {
 	},
 
 	computed: {
+		responseDownload() {
+			return generateOcsUrl('apps/forms/api/v2/submissions/exportSubmission/{submissionId}', { submissionId: this.submission.id })
+		},
+
 		// Format submission-timestamp to DateTime
 		submissionDateTime() {
 			return moment(this.submission.timestamp, 'X').format('LLLL')
@@ -107,7 +122,7 @@ export default {
 
 	methods: {
 		onDelete() {
-			this.$emit('delete')
+			xthis.$emit('delete')
 		},
 	},
 }
