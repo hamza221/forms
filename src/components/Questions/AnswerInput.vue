@@ -12,6 +12,7 @@
 			:maxlength="maxOptionLength"
 			minlength="1"
 			type="text"
+			rows="1"
 			@input="onInput"
 			@keydown.delete="deleteEntry"
 			@keydown.enter.prevent="addNewEntry" />
@@ -110,13 +111,12 @@ export default {
 			// clone answer
 			const answer = Object.assign({}, this.answer)
 			answer.text = this.$refs.input.value
-			if (!this.isUnique) {
-				const multipleAnswers = answer.text.split(/\r?\n/g)
-				if (multipleAnswers.length > 1) {
-					// extract all answer entries except the first one to parent
-					this.$emit('multiple-answers', multipleAnswers, this.answer)
-					return
-				}
+			let multipleAnswers = answer.text.split(/\r?\n/g)
+			multipleAnswers = multipleAnswers.filter(answer => { return answer.trim().length > 0 })
+			if (multipleAnswers.length > 1) {
+				// extract all answer entries to parent
+				this.$emit('multiple-answers', multipleAnswers, this.answer)
+				return
 			}
 
 			if (this.answer.local) {

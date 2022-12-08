@@ -61,7 +61,8 @@
 				:max-option-length="maxStringLengths.optionText"
 				@add="addNewEntry"
 				@delete="deleteOption"
-				@update:answer="updateAnswer" />
+				@update:answer="updateAnswer"
+				@multiple-answers="handleMultipleOptions" />
 
 			<li v-if="!isLastEmpty || hasNoAnswer" class="question__item">
 				<input :aria-label="t('forms', 'Add a new answer')"
