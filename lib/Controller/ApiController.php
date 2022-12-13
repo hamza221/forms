@@ -1136,4 +1136,49 @@ class ApiController extends OCSController {
 
 		return new DataResponse($fileName);
 	}
+	/**
+	 * @NoAdminRequired
+	 *
+	 * Transfer ownership of a form to another user
+	 *
+	 * @param int $formId id of the form to update
+	 * @param string $uid id of the new owner
+	 * @return DataResponse
+	 * @throws OCSBadRequestException
+	 * @throws OCSForbiddenException
+	 */
+	public function ownerTransfer(int $formId, string $uid): DataResponse {
+		$this->logger->debug('Updating owner: formId: {formId}, userId: {uid}', [
+			'formId' => $formId,
+			'uid' => $uid
+		]);
+
+		try {
+			$form = $this->formMapper->findById($formId);
+		} catch (IMapperException $e) {
+			$this->logger->debug('Could not find form');
+			throw new OCSBadRequestException('Could not find form');
+		}
+
+		if ($form->getOwnerId() !== $this->currentUser->getUID()) {
+			$this->logger->debug('This form is not owned by the current user');
+			throw new OCSForbiddenException();
+		}
+
+		// update form owner
+		$form->setOwnerId($uid);
+
+		// Update changed Columns in Db.
+		$this->formMapper->update($form);
+
+		//delete this form from shares for the new owner
+		try {
+			$share = $this->shareMapper->findPublicShareByFormIdAndUid($formId, $uid);
+			$this->shareMapper->deleteById($share->getId());
+		} catch (IMapperException $e) {
+			$this->logger->debug('No shares found');
+		}
+		
+		return new DataResponse($form->getOwnerId());
+	}
 }

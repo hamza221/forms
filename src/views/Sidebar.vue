@@ -45,7 +45,8 @@
 				<IconSettings :size="20" />
 			</template>
 			<SettingsSidebarTab :form="form"
-				@update:formProp="onPropertyChange" />
+				@update:formProp="onPropertyChange"
+				@transfer:ownership="onOwnershipTransfer" />
 		</NcAppSidebarTab>
 	</NcAppSidebar>
 </template>
@@ -93,6 +94,9 @@ export default {
 		},
 		onUpdateActive(active) {
 			this.$emit('update:active', active)
+		},
+		onOwnershipTransfer(share) {
+			this.$emit('transfer:ownership', share, this.form.id)
 		},
 
 		/**

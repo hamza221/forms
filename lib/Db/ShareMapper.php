@@ -100,7 +100,28 @@ class ShareMapper extends QBMapper {
 
 		return $this->findEntity($qb);
 	}
+	/**
+	 * Find Share by formId and user id
+	 * @param int $formId
+	 * @param string $uid
+	 * @return Share
+	 * @throws MultipleObjectsReturnedException if more than one result
+	 * @throws DoesNotExistException if not found
+	 */
+	public function findPublicShareByFormIdAndUid(int $formId, string $uid): Share {
+		$qb = $this->db->getQueryBuilder();
 
+		$qb->select('*')
+			->from($this->getTableName())
+			->where(
+				$qb->expr()->eq('form_id', $qb->createNamedParameter($formId, IQueryBuilder::PARAM_INT))
+			)
+			->andWhere(
+				$qb->expr()->eq('share_with', $qb->createNamedParameter($uid, IQueryBuilder::PARAM_STR))
+			);
+
+		return $this->findEntity($qb);
+	}
 	/**
 	 * Delete a share
 	 * @param int $id of the share.

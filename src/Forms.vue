@@ -97,8 +97,39 @@
 				:form="selectedForm"
 				:sidebar-opened.sync="sidebarOpened"
 				:active.sync="sidebarActive"
-				name="sidebar" />
+				name="sidebar"
+				@transfer:ownership="openModal" />
 		</template>
+		<NcModal v-if="modal"
+			ref="modal"
+			size="normal"
+			:title="'Transfer '+selectedForm.title"
+			name="NcModal"
+			:outTransition="true"
+			@close="closeModal">
+			<div class="modal__content">
+				<h1 class="modal_section">{{ t('forms', 'Transfer ') }} {{ selectedForm.title}}</h1>
+				<div class="modal_section">
+					<p class="modal_text">{{ t('forms', 'Account to transfer to') }}</p>
+					<SharingSearchDiv :isOwnershipTransfer="true" @add-share="setNewOwner" />
+					<div class="selected_user" v-if="transferData.displayName.length>0">
+						<p>{{transferData.displayName}}</p>
+						<NcButton type="tertiary-no-background" @click="clearSelected">
+							X
+						</NcButton>
+					</div>
+				</div>
+				<div class="modal_section">
+					<p class="modal_text">{{ t('forms', 'Type ') }} {{confirmationString}} {{ t('forms', ' to confirm') }}</p>
+					<NcTextField :value.sync="confirmation" :success="confirmation===confirmationString" :show-trailing-button="confirmation !== ''"
+						@trailing-button-click="clearText" >
+					</NcTextField>
+				</div>
+				<NcButton :disabled="confirmation!=confirmationString" type="error" @click="onOwnershipTransfer">
+					{{ t('forms', 'I understand, transfer this form') }}
+				</NcButton>
+			</div>
+		</NcModal>
 	</NcContent>
 </template>
 
@@ -106,7 +137,7 @@
 import { emit } from '@nextcloud/event-bus'
 import { generateOcsUrl } from '@nextcloud/router'
 import { loadState } from '@nextcloud/initial-state'
-import { showError } from '@nextcloud/dialogs'
+import { showError, showSuccess } from '@nextcloud/dialogs'
 import axios from '@nextcloud/axios'
 
 import NcAppContent from '@nextcloud/vue/dist/Components/NcAppContent.js'
@@ -114,10 +145,14 @@ import NcAppNavigation from '@nextcloud/vue/dist/Components/NcAppNavigation.js'
 import NcAppNavigationCaption from '@nextcloud/vue/dist/Components/NcAppNavigationCaption.js'
 import NcAppNavigationNew from '@nextcloud/vue/dist/Components/NcAppNavigationNew.js'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
+import NcTextField from '@nextcloud/vue/dist/Components/NcTextField.js'
 import NcContent from '@nextcloud/vue/dist/Components/NcContent.js'
 import NcEmptyContent from '@nextcloud/vue/dist/Components/NcEmptyContent.js'
 import NcLoadingIcon from '@nextcloud/vue/dist/Components/NcLoadingIcon.js'
 import isMobile from '@nextcloud/vue/dist/Mixins/isMobile.js'
+import NcModal from '@nextcloud/vue/dist/Components/NcModal.js'
+import SharingSearchDiv from './components/SidebarTabs/SharingSearchDiv.vue'
+
 
 import IconPlus from 'vue-material-design-icons/Plus.vue'
 
@@ -142,6 +177,9 @@ export default {
 		NcContent,
 		NcEmptyContent,
 		NcLoadingIcon,
+		NcModal,
+		SharingSearchDiv,
+		NcTextField,
 	},
 
 	mixins: [isMobile, PermissionTypes],
@@ -149,11 +187,13 @@ export default {
 	data() {
 		return {
 			loading: true,
+			modal: false,
 			sidebarOpened: false,
 			sidebarActive: 'forms-sharing',
 			forms: [],
 			sharedForms: [],
-
+			transferData: { formId: null, userId: null ,displayName: ''},
+			confirmation:'',
 			canCreateForms: loadState(appName, 'appConfig').canCreateForms,
 		}
 	},
@@ -161,6 +201,9 @@ export default {
 	computed: {
 		canEdit() {
 			return this.selectedForm.permissions.includes(this.PERMISSION_TYPES.PERMISSION_EDIT)
+		},
+		confirmationString(){
+			return `${this.selectedForm.ownerId}/${this.selectedForm.title}`
 		},
 		hasForms() {
 			return !this.noOwnedForms || !this.noSharedForms
@@ -219,12 +262,54 @@ export default {
 			},
 		},
 	},
+	
 
 	beforeMount() {
 		this.loadForms()
 	},
 
 	methods: {
+		clearSelected(){
+			this.transferData= { formId: null, userId: null ,displayName: ''}
+		},
+		clearText() {
+			this.confirmation = ''
+		},
+		setNewOwner(share){
+			console.log(share)
+			this.transferData.userId=share.shareWith
+			this.transferData.formId=this.selectedForm.id
+			this.transferData.displayName=share.displayName
+
+		},
+		closeModal() {
+			this.modal = false
+			showError(t('forms', 'Ownership transfer was Cancelled'))
+		},
+		openModal() {
+			this.modal = true
+		},
+		async onOwnershipTransfer() {
+			this.modal = false
+			if (this.transferData.formId && this.transferData.userId) {
+				try {
+					await axios.post(generateOcsUrl('apps/forms/api/v2/form/transfer'), {
+						formId: this.transferData.formId,
+						uid: this.transferData.userId,
+					})
+					showSuccess(`${t('forms', 'This form is now owned by')} ${this.transferData.displayName}`)
+					this.$router.push({ name: 'root' })
+
+				} catch (error) {
+					logger.error('Error while transfering form ownership', { error })
+					showError(t('forms', 'An error occurred while transfering ownership'))
+				}
+
+			} else {
+				logger.error('Null parameters while transfering form ownership', { transferData: this.tranferData })
+				showError(t('forms', 'An error occurred while transfering ownership'))
+			}
+		},
 		/**
 		 * Closes the App-Navigation on mobile-devices
 		 */
@@ -352,3 +437,21 @@ export default {
 	},
 }
 </script>
+<style scoped>
+.modal__content {
+	margin: 50px;
+}
+.modal_text{
+	text-align: start;
+	margin-bottom: 10px;
+}
+.modal_section{
+	margin-bottom: 20px;
+}
+
+.selected_user{
+	display: flex;
+	align-items: center;
+}
+
+</style>
