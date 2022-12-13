@@ -375,7 +375,9 @@ class SubmissionService {
 		$header[] = $this->l10n->t('User display name');
 		$header[] = $this->l10n->t('Timestamp');
 		foreach ($questions as $question) {
-			$header[] = $question->getText();
+			if(strlen($question->getText()) > 0){
+				$header[] = $question->getText();
+			}
 		}
 
 		// Init dataset
@@ -415,9 +417,12 @@ class SubmissionService {
 			}, []);
 
 			foreach ($questions as $question) {
-				$row[] = key_exists($question->getId(), $answers)
+				if(strlen($question->getText()) > 0){
+					$row[] = key_exists($question->getId(), $answers)
 					? $answers[$question->getId()]
 					: null;
+				}
+				
 			}
 
 			$data[] = $row;
