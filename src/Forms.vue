@@ -43,6 +43,14 @@
 					@clone="onCloneForm"
 					@delete="onDeleteForm" />
 
+				<!-- Collaboration Forms-->
+				<NcAppNavigationCaption v-if="!noCollaborationForms" :title="t('forms', 'Forms you collaborate in')" />
+				<AppNavigationForm v-for="form in collaborationForms"
+					:key="form.id"
+					:form="form"
+					:read-only="false"
+					@mobile-close-navigation="mobileCloseNavigation" />
+
 				<!-- Shared Forms-->
 				<NcAppNavigationCaption v-if="!noSharedForms" :title="t('forms', 'Shared with you')" />
 				<AppNavigationForm v-for="form in sharedForms"
@@ -97,6 +105,7 @@
 				:form="selectedForm"
 				:sidebar-opened.sync="sidebarOpened"
 				:active.sync="sidebarActive"
+				:isOwned="isOwned"
 				name="sidebar"
 				@transfer:ownership="openModal" />
 		</template>
@@ -193,7 +202,8 @@ export default {
 			forms: [],
 			sharedForms: [],
 			transferData: { formId: null, userId: null ,displayName: ''},
-			confirmation:'',
+			confirmation:'',			
+			collaborationForms: [],
 			canCreateForms: loadState(appName, 'appConfig').canCreateForms,
 		}
 	},
@@ -206,7 +216,7 @@ export default {
 			return `${this.selectedForm.ownerId}/${this.selectedForm.title}`
 		},
 		hasForms() {
-			return !this.noOwnedForms || !this.noSharedForms
+			return !this.noOwnedForms || !this.noSharedForms || !this.noCollaborationForms
 		},
 		noOwnedForms() {
 			return this.forms?.length === 0
@@ -214,9 +224,16 @@ export default {
 		noSharedForms() {
 			return this.sharedForms?.length === 0
 		},
+		noCollaborationForms() {
+			return this.collaborationForms?.length === 0
+		},
 
 		routeHash() {
 			return this.$route.params.hash
+		},
+		isOwned() {
+			const index = this.forms.findIndex(search => search.hash === this.routeHash)
+			return index > -1
 		},
 
 		// If the user is allowed to access this route
@@ -226,8 +243,8 @@ export default {
 				return false
 			}
 
-			// Try to find form in owned & shared list
-			const form = [...this.forms, ...this.sharedForms]
+			// Try to find form in owned & shared & collaboration list
+			const form = [...this.forms, ...this.sharedForms, ...this.collaborationForms]
 				.find(form => form.hash === this.routeHash)
 
 			// If no form found, load it from server. Route will be automatically re-evaluated.
@@ -235,7 +252,6 @@ export default {
 				this.fetchPartialForm(this.routeHash)
 				return false
 			}
-
 			// Return whether route is in the permissions-list
 			return form?.permissions.includes(this.$route.name)
 		},
@@ -243,7 +259,7 @@ export default {
 		selectedForm: {
 			get() {
 				if (this.routeAllowed) {
-					return this.forms.concat(this.sharedForms).find(form => form.hash === this.routeHash)
+					return this.forms.concat(this.sharedForms).concat(this.collaborationForms).find(form => form.hash === this.routeHash)
 				}
 				return {}
 			},
@@ -254,10 +270,15 @@ export default {
 					this.$set(this.forms, index, form)
 					return
 				}
-				// Otherwise a shared form
+				// if a shared form
 				index = this.sharedForms.findIndex(search => search.hash === this.routeHash)
 				if (index > -1) {
 					this.$set(this.sharedForms, index, form)
+				}
+				// otherwise a collaboration form
+				index = this.collaborationForms.findIndex(search => search.hash === this.routeHash)
+				if (index > -1) {
+					this.$set(this.collaborationForms, index, form)
 				}
 			},
 		},
@@ -356,6 +377,15 @@ export default {
 				showError(t('forms', 'An error occurred while loading the forms list'))
 			}
 
+			//  Load Collaboration froms
+			try {
+				const response = await axios.get(generateOcsUrl('apps/forms/api/v2/collaboration_forms'))
+				this.collaborationForms = OcsResponse2Data(response)
+			} catch (error) {
+				logger.error('Error while loading collaboration forms list', { error })
+				showError(t('forms', 'An error occurred while loading the forms list'))
+			}
+
 			this.loading = false
 		},
 
@@ -373,7 +403,12 @@ export default {
 
 				// If the user has (at least) submission-permissions, add it to the shared forms
 				if (form.permissions.includes(this.PERMISSION_TYPES.PERMISSION_SUBMIT)) {
-					this.sharedForms.push(form)
+					const collaborationIds = this.collaborationForms.map(collabForm => {
+						return collabForm.id
+					})
+					if (!collaborationIds.includes(form.id)) {
+						this.sharedForms.push(form)
+					}
 				}
 			} catch (error) {
 				logger.error(`Form ${hash} not found`, { error })

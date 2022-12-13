@@ -38,7 +38,8 @@
 				@remove-share="onRemoveShare" />
 		</NcAppSidebarTab>
 
-		<NcAppSidebarTab id="forms-settings"
+		<NcAppSidebarTab v-if="isOwner"
+			id="forms-settings"
 			:order="1"
 			:name="t('forms', 'Settings')">
 			<template #icon>
@@ -79,6 +80,14 @@ export default {
 		active: {
 			type: String,
 			default: 'forms-sharing',
+		},
+		opened: {
+			type: Boolean,
+			required: true,
+		},
+		isOwner: {
+			type: Boolean,
+			default: false,
 		},
 	},
 

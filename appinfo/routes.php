@@ -132,14 +132,21 @@ return [
 			]
 		],
 		[
-			'name' => 'api#ownerTransfer',
+			'name' => 'api#getCollaborationForms',
+			'url' => '/api/{apiVersion}/collaboration_forms',
+			'verb' => 'GET',
+			'requirements' => [
+				'apiVersion' => 'v2'
+			]
+			],
+	[
+		'name' => 'api#ownerTransfer',
 			'url' => '/api/{apiVersion}/form/transfer',
 			'verb' => 'POST',
 			'requirements' => [
 				'apiVersion' => 'v2'
 			]
-		],
-
+			],
 		// Questions
 		[
 			'name' => 'api#newQuestion',
@@ -213,6 +220,14 @@ return [
 			'name' => 'shareApi#deleteShare',
 			'url' => '/api/{apiVersion}/share/{id}',
 			'verb' => 'DELETE',
+			'requirements' => [
+				'apiVersion' => 'v2'
+			]
+		],
+		[
+			'name' => 'shareApi#toggleEditor',
+			'url' => '/api/{apiVersion}/share/toggleEditor',
+			'verb' => 'POST',
 			'requirements' => [
 				'apiVersion' => 'v2'
 			]
