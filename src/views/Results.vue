@@ -64,11 +64,29 @@
 						{{ t('forms', 'Responses') }}
 					</label>
 				</div>
+				<NcButton v-if="isLinked" :href="fileUrl" type="tertiary-no-background">
+					<template #icon>
+						<IconTable :size="20" />
+					</template>
+					{{ t('forms', 'Open spreadsheet') }}
+				</NcButton>
+				<NcButton v-else type="tertiary-no-background" @click="onLinkFile">
+					<template #icon>
+						<IconTable :size="20" />
+					</template>
+					{{ t('forms', 'Create spreadsheet') }}
+				</NcButton>
 
 				<!-- Action menu for CSV export and deletion -->
 				<NcActions class="results-menu"
 					:aria-label="t('forms', 'Options')"
 					:force-menu="true">
+					<NcActionButton :disabled="!isLinked" @click="unlinkFile">
+						<template #icon>
+							<IconLinkVariantOff :size="20" />
+						</template>
+						{{ t('forms', 'Unlink spreadsheet') }}
+					</NcActionButton>
 					<NcActionButton :close-after-click="true" @click="onStoreToFiles">
 						<template #icon>
 							<IconFolder :size="20" />
@@ -129,11 +147,12 @@
 </template>
 
 <script>
-import { generateOcsUrl } from '@nextcloud/router'
+import { generateOcsUrl, generateUrl } from '@nextcloud/router'
 import { getFilePickerBuilder, showError, showSuccess } from '@nextcloud/dialogs'
 import NcActions from '@nextcloud/vue/dist/Components/NcActions.js'
 import NcActionButton from '@nextcloud/vue/dist/Components/NcActionButton.js'
 import NcActionLink from '@nextcloud/vue/dist/Components/NcActionLink.js'
+
 import NcAppContent from '@nextcloud/vue/dist/Components/NcAppContent.js'
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
 import NcEmptyContent from '@nextcloud/vue/dist/Components/NcEmptyContent.js'
@@ -146,6 +165,8 @@ import IconDownload from 'vue-material-design-icons/Download.vue'
 import IconFolder from 'vue-material-design-icons/Folder.vue'
 import IconPoll from 'vue-material-design-icons/Poll.vue'
 import IconShareVariant from 'vue-material-design-icons/ShareVariant.vue'
+import IconTable from 'vue-material-design-icons/Table.vue'
+import IconLinkVariantOff from 'vue-material-design-icons/LinkVariantOff.vue'
 
 import ResultsSummary from '../components/Results/ResultsSummary.vue'
 import Submission from '../components/Results/Submission.vue'
@@ -172,6 +193,8 @@ export default {
 		IconFolder,
 		IconPoll,
 		IconShareVariant,
+		IconTable,
+		IconLinkVariantOff,
 		NcActions,
 		NcActionButton,
 		NcActionLink,
@@ -190,6 +213,8 @@ export default {
 		return {
 			loadingResults: true,
 			showSummary: true,
+			isLinked: false,
+			fileID: '',
 		}
 	},
 
@@ -218,6 +243,17 @@ export default {
 		downloadUrl() {
 			return generateOcsUrl('apps/forms/api/v2/submissions/export/{hash}', { hash: this.form.hash })
 		},
+		/**
+		 * Generate Link to Linked File
+		 *
+		 * @return {string}
+		 */
+		fileUrl() {
+			if (this.fileID != null) {
+				return generateUrl(`/f/${this.fileID?.data?.ocs?.data}`)
+			}
+			return window.location.href
+		},
 	},
 
 	watch: {
@@ -227,12 +263,24 @@ export default {
 		},
 	},
 
-	beforeMount() {
+	async beforeMount() {
 		this.loadFormResults()
 		SetWindowTitle(this.formTitle)
+		this.isLinked = await this.isFileLinked()
+		this.fileID = await axios.get(generateOcsUrl(`apps/forms/api/v2/submissions/fileId/${this.form.hash}`))
 	},
 
 	methods: {
+		async unlinkFile() {
+			await axios.post(generateOcsUrl('apps/forms/api/v2/submissions/unlink'), {
+				hash: this.form.hash,
+			})
+			this.isLinked = await this.isFileLinked()
+		},
+		async isFileLinked() {
+			const fileId = await axios.get(generateOcsUrl(`apps/forms/api/v2/submissions/fileId/${this.form.hash}`))
+			return fileId?.data?.ocs?.data != null
+		},
 		async loadFormResults() {
 			this.loadingResults = true
 			logger.debug(`Loading results for form ${this.form.hash}`)
@@ -256,6 +304,28 @@ export default {
 			}
 		},
 
+		async onLinkFile() {
+			if (!this.isLinked) {
+				picker.pick()
+					.then(async (path) => {
+						try {
+							 await axios.post(generateOcsUrl('apps/forms/api/v2/submissions/link'), {
+								 hash: this.form.hash,
+								 path,
+							})
+							this.isLinked = true
+							this.fileID = await axios.get(generateOcsUrl(`apps/forms/api/v2/submissions/fileId/${this.form.hash}`))
+							showSuccess(t('forms', 'File successfully linked'))
+						} catch (error) {
+							logger.error('Error while exporting to Files and linking', { error })
+							showError(t('forms', 'There was an error, while Linking the File'))
+						}
+					})
+			} else {
+				// Theoretically this will never fire
+				showSuccess(t('forms', 'File is already linked'))
+			}
+		},
 		// Show Filepicker, then call API to store
 		async onStoreToFiles() {
 			// picker.pick() does not reject Promise -> await would never resolve.
