@@ -264,7 +264,174 @@ class SubmissionService {
 			'data' => $this->array2csv($header, $data),
 		];
 	}
+	/**
+	 * Create Question specific CSV from Submissions to form
+	 * @param string $formId id of the form
+	 * @param string $questionId id of the question
+	 * @return array{fileName:string,data:string} Array with 'fileName' and 'data'
+	 */
 	
+	public function getQuestionCsv(int $formId, int $questionId): array {
+		$form = $this->formMapper->findByid($formId);
+
+		try {
+			$submissionEntities = $this->submissionMapper->findByForm($form->getId());
+		} catch (DoesNotExistException $e) {
+			// Just ignore, if no Data. Returns empty Submissions-Array
+		}
+
+		$question = $this->questionMapper->findById($questionId);
+		$defaultTimeZone = date_default_timezone_get();
+		$userTimezone = $this->config->getUserValue($this->currentUser->getUID(), 'core', 'timezone', $defaultTimeZone);
+
+		// Process initial header
+		$header = [];
+		$header[] = $this->l10n->t('User ID');
+		$header[] = $this->l10n->t('User display name');
+		$header[] = $this->l10n->t('Timestamp');
+		$header[] = $question->getText();
+		
+
+		// Init dataset
+		$data = [];
+
+
+		// Process each answers
+		foreach ($submissionEntities as $submission) {
+			$currentSubmissionAnswers = $this->answerMapper->findBySubmissionAndQuestionId($submission->getId(), $questionId);
+			$row = [];
+
+			// User
+			$user = $this->userManager->get($submission->getUserId());
+			if ($user === null) {
+				// Give empty userId
+				$row[] = '';
+				// TRANSLATORS Shown on export if no Display-Name is available.
+				$row[] = $this->l10n->t('Anonymous user');
+			} else {
+				$row[] = $user->getUID();
+				$row[] = $user->getDisplayName();
+			}
+			
+			// Date
+			$row[] = $this->dateTimeFormatter->formatDateTime($submission->getTimestamp(), 'full', 'full', new DateTimeZone($userTimezone), $this->l10n);
+
+			// Answers, make sure we keep the question order
+			$answers = array_reduce($currentSubmissionAnswers, function (array $carry, Answer $answer) {
+				$questionId = $answer->getQuestionId();
+
+				// If key exists, insert separator
+				if (key_exists($questionId, $carry)) {
+					$carry[$questionId] .= '; ' . $answer->getText();
+				} else {
+					$carry[$questionId] = $answer->getText();
+				}
+
+				return $carry;
+			}, []);
+
+			
+			$row[] = key_exists($question->getId(), $answers)
+				? $answers[$question->getId()]
+				: null;
+			
+
+			$data[] = $row;
+		}
+
+		// TRANSLATORS Appendix for CSV-Export: 'Form Title (responses).csv'
+		$fileName = $form->getTitle() . ' (' . $this->l10n->t('responses') . ').csv';
+
+		return [
+			'fileName' => $fileName,
+			'data' => $this->array2csv($header, $data),
+		];
+	}
+	
+	/**
+	 * Create a submission Csv
+	 * @param string $formId id of the form
+	 * @param string $questionId id of the question
+	 * @return array{fileName:string,data:string} Array with 'fileName' and 'data'
+	 */
+	
+	public function getSubmissionCsv(int $formId ,int  $submissionId): array {
+
+		try {
+			$submission = $this->submissionMapper->findById($submissionId);
+			$form = $this->formMapper->findById($formId);
+
+		} catch (DoesNotExistException $e) {
+			// Just ignore, if no Data. Returns empty Submissions-Array
+		}
+		
+		$questions = $this->questionMapper->findByForm($form->getId());
+		$defaultTimeZone = date_default_timezone_get();
+		$userTimezone = $this->config->getUserValue($this->currentUser->getUID(), 'core', 'timezone', $defaultTimeZone);
+
+		// Process initial header
+		$header = [];
+		$header[] = $this->l10n->t('User ID');
+		$header[] = $this->l10n->t('User display name');
+		$header[] = $this->l10n->t('Timestamp');
+		foreach ($questions as $question) {
+			$header[] = $question->getText();
+		}
+
+		// Init dataset
+		$data = [];
+
+		// Process each answers
+		
+			$row = [];
+
+			// User
+			$user = $this->userManager->get($submission->getUserId());
+			if ($user === null) {
+				// Give empty userId
+				$row[] = '';
+				// TRANSLATORS Shown on export if no Display-Name is available.
+				$row[] = $this->l10n->t('Anonymous user');
+			} else {
+				$row[] = $user->getUID();
+				$row[] = $user->getDisplayName();
+			}
+			
+			// Date
+			$row[] = $this->dateTimeFormatter->formatDateTime($submission->getTimestamp(), 'full', 'full', new DateTimeZone($userTimezone), $this->l10n);
+
+			// Answers, make sure we keep the question order
+			$answers = array_reduce($this->answerMapper->findBySubmission($submission->getId()), function (array $carry, Answer $answer) {
+				$questionId = $answer->getQuestionId();
+
+				// If key exists, insert separator
+				if (key_exists($questionId, $carry)) {
+					$carry[$questionId] .= '; ' . $answer->getText();
+				} else {
+					$carry[$questionId] = $answer->getText();
+				}
+
+				return $carry;
+			}, []);
+
+			foreach ($questions as $question) {
+				$row[] = key_exists($question->getId(), $answers)
+					? $answers[$question->getId()]
+					: null;
+			}
+
+			$data[] = $row;
+		
+
+		// TRANSLATORS Appendix for CSV-Export: 'Form Title (responses).csv'
+		$fileName = $form->getTitle() . ' (' . $this->l10n->t('responses') . ').csv';
+
+		return [
+			'fileName' => $fileName,
+			'data' => $this->array2csv($header, $data),
+		];
+	}
+
 	/**
 	 * Convert an array to a csv string
 	 * @param array $array
