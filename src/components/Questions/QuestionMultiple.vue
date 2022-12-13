@@ -66,7 +66,8 @@
 						:max-option-length="maxStringLengths.optionText"
 						@add="addNewEntry"
 						@delete="deleteOption"
-						@update:answer="updateAnswer" />
+						@update:answer="updateAnswer"
+						@multiple-answers="handleMultipleOptions" />
 				</template>
 
 				<li v-if="(edit && !isLastEmpty) || hasNoAnswer" class="question__item">
@@ -180,7 +181,6 @@ export default {
 			// Radio: create array
 			this.$emit('update:values', [this.questionValues])
 		},
-
 		/**
 		 * Is the provided answer required ?
 		 * This is needed for checkboxes as html5
@@ -244,7 +244,6 @@ export default {
 				text: '',
 				local: true,
 			})
-
 			// Update question
 			this.updateOptions(options)
 
