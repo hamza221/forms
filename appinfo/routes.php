@@ -138,15 +138,15 @@ return [
 			'requirements' => [
 				'apiVersion' => 'v2'
 			]
-			],
-	[
-		'name' => 'api#ownerTransfer',
+		],
+		[
+			'name' => 'api#ownerTransfer',
 			'url' => '/api/{apiVersion}/form/transfer',
 			'verb' => 'POST',
 			'requirements' => [
 				'apiVersion' => 'v2'
 			]
-			],
+		],
 		// Questions
 		[
 			'name' => 'api#newQuestion',
@@ -228,6 +228,14 @@ return [
 			'name' => 'shareApi#toggleEditor',
 			'url' => '/api/{apiVersion}/share/toggleEditor',
 			'verb' => 'POST',
+			'requirements' => [
+				'apiVersion' => 'v2'
+			]
+		],
+		[
+			'name' => 'shareApi#isEditor',
+			'url' => '/api/{apiVersion}/share/isEditor',
+			'verb' => 'GET',
 			'requirements' => [
 				'apiVersion' => 'v2'
 			]

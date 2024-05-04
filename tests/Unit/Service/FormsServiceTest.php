@@ -152,6 +152,8 @@ class FormsServiceTest extends TestCase {
 					'permitAllUsers' => false,
 					'showToAllUsers' => false,
 				],
+				'fileId' => null,
+				'filePath' => null,
 				'expires' => 0,
 				'isAnonymous' => false,
 				'submitMultiple' => true,
@@ -198,7 +200,8 @@ class FormsServiceTest extends TestCase {
 						'formId' => 42,
 						'shareType' => 0,
 						'shareWith' => 'someUser',
-						'displayName' => 'Some User'
+						'displayName' => 'Some User',
+						'isEditor' => false,
 					]
 				],
 				'permissions' => [
@@ -292,6 +295,8 @@ class FormsServiceTest extends TestCase {
 		$share->setFormId(42);
 		$share->setShareType(0);
 		$share->setShareWith('someUser');
+		$share->setIsEditor(false);
+
 
 		$this->shareMapper->expects($this->any())
 			->method('findByForm')
@@ -357,6 +362,8 @@ class FormsServiceTest extends TestCase {
 				'description' => 'Description Text',
 				'created' => 123456789,
 				'expires' => 0,
+				'fileId' => null,
+				'filePath' => null,
 				'isAnonymous' => false,
 				'submitMultiple' => true,
 				'canSubmit' => true,
@@ -388,6 +395,8 @@ class FormsServiceTest extends TestCase {
 		$form->setExpires(0);
 		$form->setIsAnonymous(false);
 		$form->setSubmitMultiple(true);
+		$form->setFileId(null);
+		$form->setFilePath(null);
 
 		$this->formMapper->expects($this->any())
 			->method('findById')
@@ -417,7 +426,7 @@ class FormsServiceTest extends TestCase {
 		$share->setShareType(0);
 		$share->setShareWith('currentUser');
 
-		$this->shareMapper->expects($this->exactly(3))
+		$this->shareMapper->expects($this->exactly(4))
 			->method('findByForm')
 			->with(42)
 			->willReturn([$share]);
@@ -434,6 +443,7 @@ class FormsServiceTest extends TestCase {
 					'permitAllUsers' => false,
 					'showToAllUsers' => false,
 				],
+				'isEditor' => false,
 				'expected' => ['edit', 'results', 'submit'],
 			],
 			'allUsersCanSubmit' => [
@@ -442,6 +452,7 @@ class FormsServiceTest extends TestCase {
 					'permitAllUsers' => true,
 					'showToAllUsers' => false,
 				],
+				'isEditor' => false,
 				'expected' => ['submit'],
 			],
 			'noPermission' => [
@@ -450,7 +461,17 @@ class FormsServiceTest extends TestCase {
 					'permitAllUsers' => false,
 					'showToAllUsers' => false,
 				],
-				'expected' => [],
+				'isEditor' => false,
+				'expected' => ['submit'],
+			],
+			'editorHasAllPermissions' => [
+				'ownerId' => 'someOtherUser',
+				'access' => [
+					'permitAllUsers' => false,
+					'showToAllUsers' => false,
+				],
+				'isEditor' => true,
+				'expected' => ['edit', 'results', 'submit'],
 			]
 		];
 	}
@@ -461,11 +482,17 @@ class FormsServiceTest extends TestCase {
 	 * @param array $access
 	 * @param array $expected
 	 */
-	public function testGetPermissions(string $ownerId, array $access, array $expected) {
+	public function testGetPermissions(string $ownerId, array $access, bool $isEditor, array $expected) {
 		$form = new Form();
 		$form->setId(42);
 		$form->setOwnerId($ownerId);
 		$form->setAccess($access);
+		$share = new Share();
+		$share->setId(42);
+		$share->setFormId(42);
+		$share->setShareType(0);
+		$share->setShareWith('currentUser');
+		$share->setIsEditor($isEditor);
 
 		$this->formMapper->expects($this->any())
 			->method('findById')
@@ -475,7 +502,7 @@ class FormsServiceTest extends TestCase {
 		$this->shareMapper->expects($this->any())
 			->method('findByForm')
 			->with(42)
-			->willReturn([]);
+			->willReturn([$share]);
 
 		$this->configService->expects($this->any())
 			->method('getAllowPermitAll')
@@ -780,7 +807,70 @@ class FormsServiceTest extends TestCase {
 
 		$this->assertEquals(false, $formsService->hasUserAccess(42));
 	}
+	public function dataIsSharedFormForCollaborationShown() {
+		return [
+			'dontShowToOwner' => [
+				'ownerId' => 'currentUser',
+				'expires' => 0,
+				'isEditor' => false,
+				'shareType' => IShare::TYPE_USER,
+				'expected' => false,
+			],
+			'collaborator' => [
+				'ownerId' => 'notCurrentUser',
+				'expires' => 0,
+				'isEditor' => true,
+				'shareType' => IShare::TYPE_USER,
+				'expected' => true,
+			],
+			'notShown' => [
+				'ownerId' => 'notCurrentUser',
+				'expires' => 0,
+				'isEditor' => false,
+				'shareType' => IShare::TYPE_USER,
+				'expected' => false,
+			]
+		];
+	}
+	/**
+	 * @dataProvider dataIsSharedFormForCollaborationShown
+	 *
+	 * @param string $ownerId
+	 * @param int $expires
+	 * @param array $access
+	 * @param int $shareType ShareType used for dummy-share here.
+	 * @param bool $expected
+	 */
+	public function testIsSharedFormForCollaborationShown(string $ownerId, int $expires, bool $isEditor, int $shareType, bool $expected) {
+		$form = new Form();
+		$form->setId(42);
+		$form->setOwnerId($ownerId);
+		$form->setExpires($expires);
+		$form->setAccess([
+			'permitAllUsers' => true,
+			'showToAllUsers' => false,
+		]);
 
+		$this->formMapper->expects($this->any())
+			->method('findById')
+			->with(42)
+			->willReturn($form);
+
+		$this->configService->expects($this->any())
+			->method('getAllowPermitAll')
+			->willReturn(true);
+
+		$share = new Share();
+		$share->setFormId(42);
+		$share->setShareType($shareType);
+		$share->setShareWith('currentUser'); // Only relevant, if $shareType is TYPE_USER, otherwise it's just some 'hash'
+		$share->setIsEditor($isEditor);
+		$this->shareMapper->expects($this->any())
+			->method('findByForm')
+			->with(42)
+			->willReturn([$share]);
+		$this->assertEquals($expected, $this->formsService->isSharedToUserForCollaboration(42));
+	}
 	public function dataIsSharedFormShown() {
 		return [
 			'dontShowToOwner' => [

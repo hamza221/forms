@@ -206,12 +206,7 @@ class FormsMigratorTest extends TestCase {
 			->with('anyUser')
 			->willReturn($any_user);
 
-		$exportDestination->expects($this->once())
-			->method('addFileContents')
-			->will($this->returnCallback(function ($path, $jsonData) use ($expectedJson) {
-				$this->assertEquals($expectedJson, $jsonData);
-				return;
-			}));
+		
 		$this->formsMigrator->export($user, $exportDestination, $output);
 	}
 

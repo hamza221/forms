@@ -311,6 +311,7 @@ export default {
 					isEditor: false,
 					uid: share.shareWith,
 				})
+				share.isEditor = true
 			} catch (error) {
 				logger.error('Error while setting share as responder', { error, share })
 				showError(t('forms', 'There while setting share as responder'))
@@ -328,6 +329,7 @@ export default {
 					isEditor: true,
 					uid: share.shareWith,
 				})
+				share.isEditor = false
 			} catch (error) {
 				logger.error('Error while setting share as responder', { error, share })
 				showError(t('forms', 'There while setting share as responder'))

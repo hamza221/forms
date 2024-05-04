@@ -75,10 +75,10 @@ export default {
 			default: false,
 		},
 		isOwnershipTransfer: {
-			type:Boolean,
+			type: Boolean,
 			default: false,
-			required:false
-		}
+			required: false,
+		},
 	},
 
 	data() {

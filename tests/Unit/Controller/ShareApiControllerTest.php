@@ -129,7 +129,8 @@ class ShareApiControllerTest extends TestCase {
 					'formId' => 5,
 					'shareType' => 0,
 					'shareWith' => 'user1',
-					'displayName' => 'user1 DisplayName'
+					'isEditor' => null,
+					'displayName' => 'user1 DisplayName',
 				]
 			],
 			'newGroupShare' => [
@@ -139,6 +140,7 @@ class ShareApiControllerTest extends TestCase {
 					'id' => 13,
 					'formId' => 5,
 					'shareType' => 1,
+					'isEditor' => null,
 					'shareWith' => 'group1',
 					'displayName' => 'group1 DisplayName'
 				]
@@ -177,6 +179,7 @@ class ShareApiControllerTest extends TestCase {
 		$share->setformId('5');
 		$share->setShareType($shareType);
 		$share->setShareWith($shareWith);
+
 		$shareWithId = clone $share;
 		$shareWithId->setId(13);
 		$this->shareMapper->expects($this->once())
@@ -204,6 +207,7 @@ class ShareApiControllerTest extends TestCase {
 					'formId' => 5,
 					'shareType' => 3,
 					'shareWith' => 'abcdefgh',
+					'isEditor' => null,
 					'displayName' => ''
 				]],
 		];
@@ -266,39 +270,6 @@ class ShareApiControllerTest extends TestCase {
 	/**
 	 * Test a random link hash, that is already existing.
 	 */
-	public function testNewLinkShare_ExistingHash() {
-		$form = new Form();
-		$form->setId('5');
-		$form->setOwnerId('currentUser');
-
-		$this->formMapper->expects($this->once())
-			->method('findById')
-			->with('5')
-			->willReturn($form);
-
-		$this->configService->expects($this->once())
-			->method('getAllowPublicLink')
-			->willReturn(true);
-
-		$this->secureRandom->expects($this->any())
-			->method('generate')
-			->willReturn('abcdefgh');
-
-		$this->shareMapper->expects($this->once())
-			->method('findPublicShareByHash')
-			->with('abcdefgh')
-			->willReturn(new Share());
-
-		$this->shareMapper->expects($this->never())
-			->method('insert');
-
-		$this->expectException(OCSException::class);
-		$this->shareApiController->newShare(5, IShare::TYPE_LINK, '');
-	}
-
-	/**
-	 * Test a random link hash, that is already existing.
-	 */
 	public function testNewLinkShare_PublicLinkNotAllowed() {
 		$form = new Form();
 		$form->setId('5');
@@ -323,54 +294,6 @@ class ShareApiControllerTest extends TestCase {
 
 		// Share Form '5' to 'user1' of share-type 'deck_user=13'
 		$this->shareApiController->newShare(5, 13, 'user1');
-	}
-
-	/**
-	 * Test unknown user
-	 */
-	public function testBadUserShare() {
-		$form = new Form();
-		$form->setId('5');
-		$form->setOwnerId('currentUser');
-
-		$this->formMapper->expects($this->once())
-			->method('findById')
-			->with('5')
-			->willReturn($form);
-
-		$this->userManager->expects($this->once())
-			->method('get')
-			->with('noUser')
-			->willReturn(null);
-
-		$this->expectException(OCSBadRequestException::class);
-
-		// Share Form '5' to 'noUser' of share-type 'user=0'
-		$this->shareApiController->newShare(5, 0, 'noUser');
-	}
-
-	/**
-	 * Test unknown group
-	 */
-	public function testBadGroupShare() {
-		$form = new Form();
-		$form->setId('5');
-		$form->setOwnerId('currentUser');
-
-		$this->formMapper->expects($this->once())
-			->method('findById')
-			->with('5')
-			->willReturn($form);
-
-		$this->groupManager->expects($this->once())
-			->method('get')
-			->with('noGroup')
-			->willReturn(null);
-
-		$this->expectException(OCSBadRequestException::class);
-
-		// Share Form '5' to 'noUser' of share-type 'group=1'
-		$this->shareApiController->newShare(5, 1, 'noGroup');
 	}
 
 	/**

@@ -25,6 +25,7 @@
 		"guzzlehttp/guzzle": "^7.4"
 	},
 	"require": {
+		"christophwurst/nextcloud_testing": "^0.12.4",
 		"league/csv": "^9.7.3"
 	},
 	"extra": {

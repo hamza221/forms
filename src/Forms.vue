@@ -105,7 +105,7 @@
 				:form="selectedForm"
 				:sidebar-opened.sync="sidebarOpened"
 				:active.sync="sidebarActive"
-				:isOwned="isOwned"
+				:is-owner="isOwner"
 				name="sidebar"
 				@transfer:ownership="openModal" />
 		</template>
@@ -114,27 +114,34 @@
 			size="normal"
 			:title="'Transfer '+selectedForm.title"
 			name="NcModal"
-			:outTransition="true"
+			:out-transition="true"
 			@close="closeModal">
 			<div class="modal__content">
-				<h1 class="modal_section">{{ t('forms', 'Transfer ') }} {{ selectedForm.title}}</h1>
+				<h1 class="modal_section">
+					{{ t('forms', 'Transfer ') }} {{ selectedForm.title }}
+				</h1>
 				<div class="modal_section">
-					<p class="modal_text">{{ t('forms', 'Account to transfer to') }}</p>
-					<SharingSearchDiv :isOwnershipTransfer="true" @add-share="setNewOwner" />
-					<div class="selected_user" v-if="transferData.displayName.length>0">
-						<p>{{transferData.displayName}}</p>
+					<p class="modal_text">
+						{{ t('forms', 'Account to transfer to') }}
+					</p>
+					<SharingSearchDiv :is-ownership-transfer="true" @add-share="setNewOwner" />
+					<div v-if="transferData.displayName.length>0" class="selected_user">
+						<p>{{ transferData.displayName }}</p>
 						<NcButton type="tertiary-no-background" @click="clearSelected">
 							X
 						</NcButton>
 					</div>
 				</div>
 				<div class="modal_section">
-					<p class="modal_text">{{ t('forms', 'Type ') }} {{confirmationString}} {{ t('forms', ' to confirm') }}</p>
-					<NcTextField :value.sync="confirmation" :success="confirmation===confirmationString" :show-trailing-button="confirmation !== ''"
-						@trailing-button-click="clearText" >
-					</NcTextField>
+					<p class="modal_text">
+						{{ t('forms', 'Type ') }} {{ confirmationString }} {{ t('forms', ' to confirm') }}
+					</p>
+					<NcTextField :value.sync="confirmation"
+						:success="confirmation===confirmationString"
+						:show-trailing-button="confirmation !== ''"
+						@trailing-button-click="clearText" />
 				</div>
-				<NcButton :disabled="confirmation!=confirmationString" type="error" @click="onOwnershipTransfer">
+				<NcButton :disabled="confirmation!==confirmationString" type="error" @click="onOwnershipTransfer">
 					{{ t('forms', 'I understand, transfer this form') }}
 				</NcButton>
 			</div>
@@ -161,7 +168,6 @@ import NcLoadingIcon from '@nextcloud/vue/dist/Components/NcLoadingIcon.js'
 import isMobile from '@nextcloud/vue/dist/Mixins/isMobile.js'
 import NcModal from '@nextcloud/vue/dist/Components/NcModal.js'
 import SharingSearchDiv from './components/SidebarTabs/SharingSearchDiv.vue'
-
 
 import IconPlus from 'vue-material-design-icons/Plus.vue'
 
@@ -201,8 +207,8 @@ export default {
 			sidebarActive: 'forms-sharing',
 			forms: [],
 			sharedForms: [],
-			transferData: { formId: null, userId: null ,displayName: ''},
-			confirmation:'',			
+			transferData: { formId: null, userId: null, displayName: '' },
+			confirmation: '',
 			collaborationForms: [],
 			canCreateForms: loadState(appName, 'appConfig').canCreateForms,
 		}
@@ -212,7 +218,7 @@ export default {
 		canEdit() {
 			return this.selectedForm.permissions.includes(this.PERMISSION_TYPES.PERMISSION_EDIT)
 		},
-		confirmationString(){
+		confirmationString() {
 			return `${this.selectedForm.ownerId}/${this.selectedForm.title}`
 		},
 		hasForms() {
@@ -231,7 +237,7 @@ export default {
 		routeHash() {
 			return this.$route.params.hash
 		},
-		isOwned() {
+		isOwner() {
 			const index = this.forms.findIndex(search => search.hash === this.routeHash)
 			return index > -1
 		},
@@ -283,24 +289,22 @@ export default {
 			},
 		},
 	},
-	
 
 	beforeMount() {
 		this.loadForms()
 	},
 
 	methods: {
-		clearSelected(){
-			this.transferData= { formId: null, userId: null ,displayName: ''}
+		clearSelected() {
+			this.transferData = { formId: null, userId: null, displayName: '' }
 		},
 		clearText() {
 			this.confirmation = ''
 		},
-		setNewOwner(share){
-			console.log(share)
-			this.transferData.userId=share.shareWith
-			this.transferData.formId=this.selectedForm.id
-			this.transferData.displayName=share.displayName
+		setNewOwner(share) {
+			this.transferData.userId = share.shareWith
+			this.transferData.formId = this.selectedForm.id
+			this.transferData.displayName = share.displayName
 
 		},
 		closeModal() {

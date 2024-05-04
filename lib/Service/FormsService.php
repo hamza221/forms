@@ -270,24 +270,18 @@ class FormsService {
 			return Constants::PERMISSION_ALL;
 		}
 
-		$permissions = [];
-
 		if ($this->isSharedToUserForCollaboration($formId)) {
-			$permissions[] = Constants::PERMISSION_EDIT;
-			$permissions[] = Constants::PERMISSION_RESULTS;
-			$permissions[] = Constants::PERMISSION_SUBMIT;
-		
-			return $permissions;
+			return Constants::PERMISSION_ALL;
 		}
 		
 		// Add submit permission if user has access.
 		if ($this->hasUserAccess($formId)) {
-			$permissions[] = Constants::PERMISSION_SUBMIT;
+			return [Constants::PERMISSION_SUBMIT];
 		}
 
 	
 
-		return $permissions;
+		return [];
 	}
 
 	/**
@@ -469,7 +463,7 @@ class FormsService {
 			return true;
 		}
 
-		// No Reason found to allwow form edit.
+		// No Reason found to allow form edit.
 		return false;
 	}
 	/**

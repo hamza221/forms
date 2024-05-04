@@ -69,15 +69,12 @@ import NcCheckboxRadioSwitch from '@nextcloud/vue/dist/Components/NcCheckboxRadi
 import NcButton from '@nextcloud/vue/dist/Components/NcButton.js'
 import NcDatetimePicker from '@nextcloud/vue/dist/Components/NcDatetimePicker.js'
 import ShareTypes from '../../mixins/ShareTypes.js'
-import NcEmptyContent from '@nextcloud/vue/dist/Components/NcEmptyContent.js'
-
 
 export default {
 	components: {
 		NcCheckboxRadioSwitch,
 		NcDatetimePicker,
 		NcButton,
-		NcEmptyContent,
 	},
 
 	mixins: [ShareTypes],
@@ -208,7 +205,7 @@ export default {
 			return datetime < moment().toDate()
 		},
 		onChangeOwner() {
-			this.localLoading=true
+			this.localLoading = true
 			this.$emit('transfer:ownership')
 		},
 	},

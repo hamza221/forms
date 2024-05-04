@@ -81,7 +81,7 @@ export default {
 			type: String,
 			default: 'forms-sharing',
 		},
-		opened: {
+		sidebarOpened: {
 			type: Boolean,
 			required: true,
 		},

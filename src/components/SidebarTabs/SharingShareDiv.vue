@@ -30,10 +30,10 @@
 			<span>{{ displayNameAppendix }}</span>
 		</div>
 		<NcActions class="share-div__actions">
-			<NcActionRadio name="shareType" :checked="true" @update:checked="setResponder">
+			<NcActionRadio name="shareType" :checked="!share.isEditor" @update:checked="setResponder">
 				{{ t('forms', 'Responder') }}
 			</NcActionRadio>
-			<NcActionRadio name="shareType" @update:checked="setEditor">
+			<NcActionRadio name="shareType" :checked="share.isEditor" @update:checked="setEditor">
 				{{ t('forms', 'Editor') }}
 			</NcActionRadio>
 			<NcActionButton @click="removeShare">

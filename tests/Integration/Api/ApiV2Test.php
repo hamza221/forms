@@ -667,6 +667,19 @@ class ApiV2Test extends TestCase {
 		}
 		$this->assertEquals(400, $resp->getStatusCode());
 	}
+	public function testTransferFormOwnership() {
+		$resp = $this->http->request('POST', '/api/v2/form/transfer', [
+			'json' => [
+				'formId' => $this->testForms[0]['id'],
+				'uid' => 'iAmANewUser'
+			]
+		]
+		);
+		$data = $this->OcsResponse2Data($resp);
+		$this->assertEquals(200, $resp->getStatusCode());
+		$this->assertEquals($this->testForms[0]['ownerId'], "iAmANewUser");
+	}
+
 
 	public function dataCreateNewQuestion() {
 		return [

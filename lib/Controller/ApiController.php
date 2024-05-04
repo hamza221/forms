@@ -1163,7 +1163,7 @@ class ApiController extends OCSController {
 	 * @NoAdminRequired
 	 * @NoCSRFRequired
 	 *
-	 * Export a single submission 
+	 * Export a single submission
 	 *
 	 * @param int $submissionId of the submission
 	 * @return DataDownloadResponse
@@ -1232,7 +1232,7 @@ class ApiController extends OCSController {
 		return new DataResponse($fileName);
 	}
 
-/**
+	/**
 	 * @NoAdminRequired
 	 *
 	 * Return File ID

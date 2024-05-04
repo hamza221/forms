@@ -83,10 +83,9 @@
 					:max-string-lengths="maxStringLengths"
 					v-bind="question"
 					:values.sync="answers[question.id]"
-					:drop-down-state="formValuesForLocalStorage[question.id]"
 					@keydown.enter="onKeydownEnter"
 					@keydown.ctrl.enter="onKeydownCtrlEnter"
-					@update:values="addFormFieldToLocalStorage(question,answers[question.id],answerTypes[question.type])" />
+					@update:values="addFormFieldToLocalStorage(question)" />
 			</ul>
 			<input ref="submitButton"
 				class="primary"
@@ -154,7 +153,6 @@ export default {
 			maxStringLengths: loadState('forms', 'maxStringLengths'),
 			answerTypes,
 			answers: {},
-			formValuesForLocalStorage: [],
 			loading: false,
 			success: false,
 		}
@@ -173,6 +171,13 @@ export default {
 			return t('forms', 'New form')
 		},
 
+		formValuesForLocalStorage() {
+			const fromLocalStorage = localStorage.getItem(`nextcloud_forms_${this.publicView ? this.shareHash : this.hash}`)
+			if (fromLocalStorage) {
+				return JSON.parse(fromLocalStorage)
+			}
+			return {}
+		},
 		validQuestions() {
 			return this.form.questions.filter(question => {
 				// All questions must have a valid title
@@ -224,28 +229,9 @@ export default {
 			this.resetData()
 			// Fetch full form on change
 			this.fetchFullForm(this.form.id)
+			this.initFromLocalHost()
 			SetWindowTitle(this.formTitle)
 		},
-	},
-	mounted() {
-		if (localStorage.getItem(`${this.shareHash}`)) {
-			this.formValuesForLocalStorage = JSON.parse(localStorage.getItem(`${this.shareHash}`))
-
-			this.formValuesForLocalStorage.forEach(answer => {
-				if (answer) {
-					switch (answer?.type) {
-					case 'QuestionMultiple':
-						this.answers[answer.id] = answer.value
-						break
-					case 'QuestionDate':
-						break
-					default:
-						this.answers[answer.id] = [answer.value]
-						break
-					}
-				}
-			})
-		}
 	},
 
 	beforeMount() {
@@ -256,9 +242,31 @@ export default {
 			this.fetchFullForm(this.form.id)
 		}
 		SetWindowTitle(this.formTitle)
+		if (this.isLoggedIn) {
+			this.initFromLocalHost()
+		}
 	},
 
 	methods: {
+		initFromLocalHost() {
+			if (localStorage.getItem(`nextcloud_forms_${this.publicView ? this.shareHash : this.hash}`)) {
+				for (const key in this.formValuesForLocalStorage) {
+					const answer = this.formValuesForLocalStorage[key]
+					const answers = []
+					switch (answer?.type) {
+					case 'QuestionMultiple':
+						answer.value.forEach(num => {
+							answers.push(num.toString())
+						})
+						this.answers[key] = answers
+						break
+					default:
+						this.answers[key] = answer.value
+						break
+					}
+				}
+			}
+		},
 		/**
 		 * On Enter, focus next form-element
 		 * Last form element is the submit button, the form submits on enter then
@@ -281,32 +289,25 @@ export default {
 			// Using button-click event to not bypass validity-checks and use our specified behaviour
 			this.$refs.submitButton.click()
 		},
-		addFormFieldToLocalStorage(question, value, type) {
-			if (question.type === 'dropdown') {
-				for (const option in question.options) {
-					if (question.options[option].id === value[0]) {
-						this.formValuesForLocalStorage[question.id] = { id: question.id, value: question.options[option], type: type.component.name }
-						break
-					}
-				}
-			} else {
-				this.formValuesForLocalStorage[question.id] = { id: question.id, value, type: type.component.name }
+		addFormFieldToLocalStorage(question) {
+			if (!this.isLoggedIn) {
+				return
 			}
+			this.formValuesForLocalStorage[`${question.id}`] = { value: this.answers[question.id], type: answerTypes[question.type].component.name }
 			const parsed = JSON.stringify(this.formValuesForLocalStorage)
-			localStorage.setItem(`${this.shareHash}`, parsed)
-
+			localStorage.setItem(`nextcloud_forms_${this.publicView ? this.shareHash : this.hash}`, parsed)
 		},
 		deleteFormFieldFromLocalStorage() {
-			this.formValuesForLocalStorage = []
-			const parsed = JSON.stringify(this.formValuesForLocalStorage)
-			localStorage.setItem('formFields', parsed)
+			if (!this.isLoggedIn) {
+				return
+			}
+			localStorage.removeItem(`nextcloud_forms_${this.publicView ? this.shareHash : this.hash}`)
 		},
 
 		/**
 		 * Submit the form after the browser validated it 🚀
 		 */
 		async onSubmit() {
-			this.deleteFormFieldFromLocalStorage()
 			this.loading = true
 
 			try {
@@ -316,6 +317,8 @@ export default {
 					shareHash: this.shareHash,
 				})
 				this.success = true
+				this.deleteFormFieldFromLocalStorage()
+				this.$emit('forms:last-updated:set', this.form.id)
 			} catch (error) {
 				logger.error('Error while submitting the form', { error })
 				showError(t('forms', 'There was an error submitting the form'))

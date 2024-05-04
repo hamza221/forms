@@ -122,7 +122,7 @@ export default {
 
 	methods: {
 		onDelete() {
-			xthis.$emit('delete')
+			this.$emit('delete')
 		},
 	},
 }

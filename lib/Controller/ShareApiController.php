@@ -146,7 +146,7 @@ class ShareApiController extends OCSController {
 		}
 
 		// Check for permission to share form
-		if (!$this->formsService->isAllowedToEdit($formId)) {
+		if ($form->getOwnerId() !== $this->currentUser->getUID()) {
 			$this->logger->debug('This form is not owned by the current user');
 			throw new OCSForbiddenException();
 		}
@@ -244,6 +244,18 @@ class ShareApiController extends OCSController {
 
 		return new DataResponse($id);
 	}
+	/**
+	 * @NoAdminRequired
+	 */
+	public function isEditor(int $formId, string $uid): DataResponse {
+		$shareId = $this->formsService->getShareByFromIdAndUserid($formId, $uid);
+		if ($shareId < 0) {
+			$this->logger->debug('Share doesnt exist');
+			throw new DoesNotExistException('Share doesnt exist');
+		}
+		$share = $this->shareMapper->findById($shareId);
+		return new DataResponse($share->getIsEditor());
+	}
 
 	/**
 	 * @NoAdminRequired
@@ -259,7 +271,7 @@ class ShareApiController extends OCSController {
 	 */
 	public function toggleEditor(int $formId, bool $isEditor, string $uid): DataResponse {
 		$this->logger->debug('updating editor role in share: {id} to {isEditor} for user: {uid}', [
-			'id' => $id,
+			'id' => $formId,
 			'isEditor' => $isEditor,
 			'uid' => $uid
 		]);
@@ -282,7 +294,7 @@ class ShareApiController extends OCSController {
 			}
 		}
 
-		if ($form->getOwnerId() !== $this->currentUser->getUID()) {
+		if (!$this->formsService->isAllowedToEdit($formId)) {
 			$this->logger->debug('This form is not owned by the current user');
 			throw new OCSForbiddenException();
 		}
